@@ -1,0 +1,4 @@
+#!/bin/bash -l
+
+python cap_client.py $@
+

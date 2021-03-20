@@ -1,0 +1,14 @@
+# large data files and images
+*gz
+*zip
+*pdf
+*tiff
+*png
+*webp
+
+# secrets
+*secret*
+
+# python
+*__pycache__*
+
