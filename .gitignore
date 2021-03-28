@@ -7,8 +7,9 @@
 *webp
 
 # secrets
-*secret*
+**secret**
 
 # python
 *__pycache__*
+*egg-info*
 
