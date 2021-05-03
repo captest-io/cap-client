@@ -115,7 +115,7 @@ def update(api_url, credentials, file_path, collection="blog", action="publish")
     # round 2 - identify available support files
     list_url = api_url + "data/list/" + doc_uuid
     file_list = api_get(list_url, credentials.token)
-    # round 3 - adjust the raw body with urls for support images
+    # round 3 - adjust the raw body with urls for support images (webp)
     if "support" in header:
         body["content"] = inject_support(body["content"], header["support"],
                                          file_list, api_url)
@@ -153,7 +153,7 @@ def primary(api_url, credentials, file_path, collection="blog", **kwargs):
 
 
 def support(api_url, credentials, file_path, collection="blog", **kwargs):
-    """upload support files (images) for a document
+    """upload support files (images/pictures)
 
     :param api_url: string, base url for the api
     :param credentials: object with authorization credentials

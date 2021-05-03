@@ -41,7 +41,7 @@ parser.add_argument("--token", action="store", default=None,
 
 
 # access address and credentials
-parser.add_argument("--api", action="store", default="http://0.0.0.0:7000/",
+parser.add_argument("--api", action="store", default="https://api.captest.io/",
                     help="url to the api server")
 parser.add_argument("--secrets", action="store", default="secrets.yaml",
                     help="file with username and passwords")
