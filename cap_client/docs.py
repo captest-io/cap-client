@@ -2,7 +2,8 @@
 handling api requests for blog or documentation pages
 """
 
-from os.path import dirname, join
+import os
+from os.path import dirname, join, exists, dirname
 from yaml import safe_load
 from .api import api_post, api_get
 from .datafiles import upload
@@ -75,13 +76,38 @@ def get_doc_uuid(api_url, credentials, collection="blog", identifier_str=""):
 
 
 def inject_support(content, support_files, file_list, api_url):
-    """adjust a string, replace simple file names by paths to support files"""
+    """replace simple file names by paths to support files"""
     result = content
     for file in file_list:
         if file["file_name"] not in support_files:
             continue
         result = result.replace(file["file_name"],
                                 api_url + "static/" + file["path"])
+    return result
+
+
+def context_text(v, dir):
+    """get text value for a context variable
+
+    :param v: string, raw value, or filename pointing to more text
+    :param dir: string, directory where to search for the data
+    :return: content within a data file if a file exists, otherwise
+        the raw value v
+    """
+    v_file = join(dir, v)
+    if not exists(v_file):
+        return v.strip()
+    with open(v_file, "rt") as f:
+        result = "".join(f.readlines())
+    return result.strip()
+
+
+def inject_context(content, context, dir=None):
+    """replace placeholders by values from a context dictionary"""
+    result = content
+    for k, v in context.items():
+        v_text = context_text(v, dir=dir)
+        result = result.replace("{" + k + "}", v_text)
     return result
 
 
@@ -116,9 +142,11 @@ def update(api_url, credentials, file_path, collection="blog", action="publish")
     list_url = api_url + "data/list/" + doc_uuid
     file_list = api_get(list_url, credentials.token)
     # round 3 - adjust the raw body with urls for support images (webp)
-    if "support" in header:
-        body["content"] = inject_support(body["content"], header["support"],
-                                         file_list, api_url)
+    body["content"] = inject_support(body["content"], header.get("support", []),
+                                     file_list, api_url)
+    body["content"] = inject_context(body["content"], header.get("context", {}),
+                                     dir=dirname(file_path))
+    # send the content to the api
     url = api_url + collection + "/update/" + doc_uuid
     result = api_post(url, credentials.token, body)
     return prep_output(result, file_path)

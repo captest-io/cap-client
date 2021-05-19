@@ -8,7 +8,7 @@ import argparse
 import logging
 from json import dumps
 from os import listdir
-from os.path import join
+from os.path import join, basename
 from getpass import getpass
 from cap_client.validations import validate_config, ValidationError
 from cap_client.credentials import CredentialsManager
@@ -150,6 +150,7 @@ if config.action in doc_actions:
     if config.dir is not None:
         files = [join(config.dir, _) for _ in listdir(config.dir)]
     files = [_ for _ in files if _.endswith(".md")]
+    files = [_ for _ in files if not basename(_).startswith("_")]
     for f in files:
         result.append(action_fun(api, credentials, f,
                                  collection=config.collection,
