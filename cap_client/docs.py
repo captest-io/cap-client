@@ -142,10 +142,10 @@ def update(api_url, credentials, file_path, collection="blog", action="publish")
     list_url = api_url + "data/list/" + doc_uuid
     file_list = api_get(list_url, credentials.token)
     # round 3 - adjust the raw body with urls for support images (webp)
-    body["content"] = inject_support(body["content"], header.get("support", []),
-                                     file_list, api_url)
     body["content"] = inject_context(body["content"], header.get("context", {}),
                                      dir=dirname(file_path))
+    body["content"] = inject_support(body["content"], header.get("support", []),
+                                     file_list, api_url)
     # send the content to the api
     url = api_url + collection + "/update/" + doc_uuid
     result = api_post(url, credentials.token, body)
@@ -168,15 +168,18 @@ def primary(api_url, credentials, file_path, collection="blog", **kwargs):
         validate_collection(collection, header)
     except (ClientError, ValidationError) as e:
         return {"_file": file_path, "_exception": e.message}
-    if "datafile" not in header:
-        return {"_file": file_path, "_exception": "missing datafile"}
+    for k in ("datafile", "datafile_source", "datafile_license"):
+        if k not in header:
+            return {"_file": file_path, "_exception": "missing "+k}
     datafile_path = join(dirname(file_path), header["datafile"])
     # round 1 - fetch the latest information about the document
     identifier_str = str(header["name"]) + "/" + str(header["version"])
     doc_uuid = get_doc_uuid(api_url, credentials, collection, identifier_str)
     # round 2 - upload the datafile specified in the doc header
     result = upload(api_url, credentials, datafile_path, file_role="primary",
-                    parent_uuid=doc_uuid, parent_type=collection)
+                    parent_uuid=doc_uuid, parent_type=collection,
+                    source=header["datafile_source"],
+                    license=header["datafile_license"])
     return prep_output(result, datafile_path)
 
 
@@ -216,6 +219,8 @@ def support(api_url, credentials, file_path, collection="blog", **kwargs):
         file_result = upload(api_url, credentials, support_path,
                              file_role="support",
                              parent_uuid=doc_uuid,
-                             parent_type=collection)
+                             parent_type=collection,
+                             source=credentials.username,
+                             license="CC BY 4.0")
         result.append(prep_output(file_result, support_path))
     return {"_file": file_path, "uuid": doc_uuid, "_support": result}

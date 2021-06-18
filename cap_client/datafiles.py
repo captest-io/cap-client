@@ -13,13 +13,15 @@ def list_datafiles(api_url, credentials, parent_uuid):
 
 
 def upload(api_url, credentials, file_path, file_role,
-           parent_uuid, parent_type):
+           parent_uuid, parent_type, source, license):
     url = api_url + "data/upload/"
     metadata = {
         "file_role": file_role,
         "file_name": basename(file_path),
         "parent_uuid": parent_uuid,
-        "parent_type": parent_type
+        "parent_type": parent_type,
+        "source": source,
+        "license": license
     }
     return api_upload(url, credentials.token, file_path, metadata)
 
