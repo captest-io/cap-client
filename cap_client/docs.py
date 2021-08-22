@@ -224,3 +224,25 @@ def support(api_url, credentials, file_path, collection="blog", **kwargs):
                              license="CC BY 4.0")
         result.append(prep_output(file_result, support_path))
     return {"_file": file_path, "uuid": doc_uuid, "_support": result}
+
+
+def delete(api_url, credentials, file_path, collection="blog"):
+    """send a command to delete a document"""
+    try:
+        header, body = prep_input(file_path, action="update")
+        validate_collection(collection, header)
+    except (ClientError, ValidationError) as e:
+        return {"_file": file_path, "_exception": e.message}
+    # round 1 - get uuid for the document
+    identifier, version = header["name"], header["version"]
+    if version is not None and version != "":
+        identifier += "/" + str(version)
+    try:
+        get_doc_uuid(api_url, credentials, collection, identifier)
+    except ClientError as e:
+        return {"_file": file_path, "_exception": e.message}
+    # round 2 - send command to delete
+    url = api_url + collection + "/delete/"
+    body = {"identifier": header["name"], "version": str(version)}
+    result = api_post(url, credentials.token, body)
+    return prep_output(result, file_path)

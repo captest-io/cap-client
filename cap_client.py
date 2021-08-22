@@ -33,7 +33,8 @@ parser.add_argument("action", action="store",
                              "submit",
                              "create", "publish", "obsolete",
                              "upload_primary", "upload_support",
-                             "build_search", "summary"])
+                             "build_search", "summary",
+                             "delete"])
 parser.add_argument("--username", action="store", required=True,
                     help="username")
 parser.add_argument("--token", action="store", default=None,
@@ -50,8 +51,8 @@ parser.add_argument("--save_secrets", action="store_true",
 
 # documents (e.g. blog, documentation, resource, etc.)
 parser.add_argument("--collection", action="store", default=None,
-                    choices=["documentation", "blog", 'resource', "challenge",
-                             "image"],
+                    choices=["documentation", "blog", 'resource',
+                             "challenge", "image"],
                     help="document type used with --create and --publish")
 parser.add_argument("--file", action="store", default=None,
                     help="path to file to process")
@@ -155,6 +156,12 @@ if config.action in doc_actions:
         result.append(action_fun(api, credentials, f,
                                  collection=config.collection,
                                  action=config.action))
+
+
+# delete assignments, challenges, etc. (restricted to admin users)
+if config.action == "delete":
+    result.append(docs.delete(api, credentials, config.file,
+                              collection=config.collection))
 
 
 # display output from the script
