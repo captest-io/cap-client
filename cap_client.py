@@ -1,5 +1,5 @@
 """
-a command-line client for interacting with the api
+a command-line client for interacting with the captest.io api
 Usage: python cap_client.py --help
 """
 
@@ -23,65 +23,123 @@ if __name__ != "__main__":
 # ############################################################################
 # Arguments
 
-parser = argparse.ArgumentParser(description="cap_client")
+parser = argparse.ArgumentParser(
+    description="client for interfacing with www.captest.io"
+)
 
-# compulsory arguments
-parser.add_argument("action", action="store",
-                    help="Name of action to perform with the client",
-                    choices=["assignments", "datafiles",
-                             "upload", "remove",
-                             "submit",
-                             "create", "publish", "obsolete",
-                             "upload_primary", "upload_support",
-                             "build_search", "summary",
-                             "delete"])
-parser.add_argument("--username", action="store", required=True,
+# users and credentials
+parser.add_argument("--username", action="store", default=None,
                     help="username")
 parser.add_argument("--token", action="store", default=None,
                     help="authorization token")
-
-
-# access address and credentials
-parser.add_argument("--api", action="store", default="https://api.captest.io/",
-                    help="url to the api server")
 parser.add_argument("--secrets", action="store", default="secrets.yaml",
                     help="file with username and passwords")
 parser.add_argument("--save_secrets", action="store_true",
                     help="save secrets into a local disk file")
-
-# documents (e.g. blog, documentation, resource, etc.)
-parser.add_argument("--collection", action="store", default=None,
-                    choices=["documentation", "blog", 'resource',
-                             "challenge", "image"],
-                    help="document type used with --create and --publish")
-parser.add_argument("--file", action="store", default=None,
-                    help="path to file to process")
-parser.add_argument("--dir", action="store", default=None,
-                    help="path to directory to process")
-
-# uploading of data files
-parser.add_argument("--parent_uuid", action="store", default=None,
-                    help="uuid of parent object for uploaded file")
-parser.add_argument("--parent_type", action="store", default=None,
-                    choices=["assignment", "challenge", "resource"],
-                    help="association for uploaded file")
-parser.add_argument("--file_role", action="store", default=None,
-                    choices=["response", "primary", "support"],
-                    help="role for uploaded file")
-parser.add_argument("--uuid", action="store", default=None,
-                    help="object identifier")
-
-# logging
+# url for api
+parser.add_argument("--api", action="store", default="https://api.captest.io/",
+                    help="url to the api server")
+# set verbosity level
 parser.add_argument("--verbose", action="store_true",
                     help="output INFO logging messages")
+
+
+# subparsers
+subparsers = parser.add_subparsers(help="action", dest="action")
+
+# create/publish/upload for documentation/blog/image/challenge/resource docs
+sp_create = subparsers.add_parser("create",
+                                 help="create a new document")
+sp_publish = subparsers.add_parser("publish",
+                                   help="publish/update a document")
+sp_obsolete = subparsers.add_parser("obsolete",
+                                   help="mark as obsolete")
+sp_upload_primary = subparsers.add_parser("upload_primary",
+                                          help="upload primary data files")
+sp_upload_support = subparsers.add_parser("upload_support",
+                                          help="upload support data files")
+sp_delete = subparsers.add_parser("delete",
+                                  help="delete a document")
+for sp in [sp_create, sp_publish, sp_obsolete,
+           sp_upload_primary, sp_upload_support, sp_delete]:
+    sp.add_argument("--collection", action="store",
+                    default=None, required=True,
+                    choices=["documentation", "blog", 'resource',
+                             "challenge", "image"],
+                    help="type of document to process")
+    sp.add_argument("--file", action="store", default=None,
+                    help="path to document file")
+    sp.add_argument("--dir", action="store", default=None,
+                    help="path to directory with document files")
+
+# list content for assignments, datafiles, etc.
+sp_list = subparsers.add_parser("list", help="list content")
+sp_list.add_argument("--collection", action="store",
+                     default=None, required=True,
+                     choices=["assignment", "datafile"],
+                     help="type of document to list")
+sp_list.add_argument("--parent_uuid", action="store",
+                     default=None,
+                     help="uuid of parent object (required to list datafiles)")
+
+# start a new assignment
+sp_start = subparsers.add_parser("start",
+                                 help="start a new assignment")
+sp_start.add_argument("--name", action="store", default=None,
+                      help="challenge name")
+sp_start.add_argument("--version", action="store", default=None,
+                      help="challenge version")
+sp_start.add_argument("--uuid", action="store", default=None,
+                      help="challenge identifier (overrides name and version)")
+
+# download data associated with an assignment
+sp_download = subparsers.add_parser("download",
+                                    help="download data files for an assignment")
+sp_view = subparsers.add_parser("view",
+                                help="view the status of an assignment")
+for sp in [sp_download, sp_view]:
+    sp.add_argument("--uuid", action="store",
+                    default=None, required=True,
+                    help="uuid of an assignment")
+
+# upload response data files
+sp_upload_response = subparsers.add_parser("upload_response",
+                                           help="upload a response to the server")
+sp_upload_response.add_argument("--uuid", action="store",
+                                default=None, required=True,
+                                help="uuid of assignment")
+sp_upload_response.add_argument("--file", action="store",
+                                default=None, required=True,
+                                help="path to response data file")
+
+# remove a temporary datafile
+sp_remove = subparsers.add_parser("remove", help="remove data files from server")
+sp_remove.add_argument("--uuid", action="store",
+                       default=None, required=True,
+                       help="data file identifier")
+
+# submit an assignment
+sp_submit = subparsers.add_parser("submit",
+                                  help="submit an assignment for evaluation")
+sp_submit.add_argument("--uuid", action="store", default=None, required=True,
+                       help="assignment identifier")
+sp_submit.add_argument("--tags", action="store", default=None,
+                       help="tags (comma separated)")
+
+
+# build search
+sp_search = subparsers.add_parser("build_search")
+
+# summarize content
+sp_summarize = subparsers.add_parser("summarize")
+
+
+# ############################################################################
+# validation of command-line arguments
 
 logging.basicConfig(format='[%(asctime)s] %(levelname) -8s %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S',
                     level=logging.WARNING)
-
-
-# ############################################################################
-# script body
 
 try:
     config = validate_config(parser.parse_args())
@@ -94,6 +152,11 @@ except ValidationError as e:
 credentials = CredentialsManager(config.api+"auth/token/",
                                  username=config.username,
                                  path=config.secrets)
+
+# make sure there is a username from: (1) command line or (2) secrets file
+if credentials.username is None:
+    logging.error("could not determine username")
+    exit()
 
 # get credentials from:
 # (1) command line, (2) secrets file, (3) interactive prompt
@@ -113,30 +176,37 @@ api = config.api
 result = []
 
 # listing items
-if config.action == "assignments":
-    result = assignments.list_assignments(api, credentials)
-if config.action == "datafiles":
-    result = datafiles.list_datafiles(api, credentials, config.parent_uuid)
+if config.action == "list":
+    if config.collection == "assignment":
+        result = assignments.list_assignments(api, credentials)
+    elif config.collection == "datafile":
+        result = datafiles.list_datafiles(api, credentials, config.parent_uuid)
 
-# data upload and data file management
-if config.action == "upload":
+# managing assignments
+if config.action == "start":
+    result = assignments.start(api, credentials, uuid=config.uuid,
+                               name=config.name, version=config.version)
+if config.action == "download":
+    result = assignments.download(api, credentials, uuid=config.uuid)
+if config.action == "upload_response":
     result = datafiles.upload(api, credentials,
                               file_path=config.file,
-                              file_role=config.file_role,
-                              parent_type=config.parent_type,
-                              parent_uuid=config.parent_uuid)
+                              file_role="response",
+                              parent_type="assignment",
+                              parent_uuid=config.uuid,
+                              source=credentials.username,
+                              license="CC BY 4.0")
 if config.action == "remove":
     result = datafiles.remove(api, credentials, uuid=config.uuid)
 if config.action == "submit":
-    result = assignments.submit(api, credentials, uuid=config.uuid)
+    result = assignments.submit(api, credentials,
+                                uuid=config.uuid,
+                                tags=config.tags)
+if config.action == "view":
+    result = assignments.view(api, credentials, uuid=config.uuid)
 
-# managing search
-if config.action == "build_search":
-    result = search.build(api, credentials)
-if config.action == "summary":
-    result = search.summary(api, credentials)
 
-# text document management
+# admin tools - managing blog/documentation/challenge/resource documents
 doc_actions = ("create", "publish", "obsolete",
                "upload_primary", "upload_support")
 if config.action in doc_actions:
@@ -157,8 +227,14 @@ if config.action in doc_actions:
                                  collection=config.collection,
                                  action=config.action))
 
+# admin tools - managing search
+if config.action == "build_search":
+    result = search.build(api, credentials)
+if config.action == "summarize":
+    result = search.summary(api, credentials)
 
-# delete assignments, challenges, etc. (restricted to admin users)
+
+# admin tools - delete assignments, challenges, etc.
 if config.action == "delete":
     result.append(docs.delete(api, credentials, config.file,
                               collection=config.collection))

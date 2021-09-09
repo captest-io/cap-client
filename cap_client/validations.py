@@ -7,22 +7,19 @@ from .errors import ValidationError
 
 
 def validate_config(config):
-    if config.action in ("publish", "create"):
-        if config.collection is None:
-            raise ValidationError("missing --collection")
-    if config.action == "datafiles":
-        if config.parent_uuid is None:
-            raise ValidationError("missing --parent_uuid")
-    if config.file is not None:
+    if "file" in config and config.file is not None:
         if not isfile(config.file):
             raise ValidationError("file does not exist: "+str(config.file))
-    if config.dir is not None:
+    if "dir" in config and config.dir is not None:
         if not isdir(config.dir):
             raise ValidationError("directory does not exist: "+str(config.dir))
     if not config.api.endswith("/"):
         config.api += "/"
     if not config.api.startswith("http"):
-        config.api = "http://"+config.api
+        config.api = "https://"+config.api
+    if config.action == "list" and config.collection == "datafile":
+        if config.parent_uuid is None:
+            raise ValidationError("parent_uuid is required")
     return config
 
 

@@ -29,7 +29,6 @@ class CredentialsManager:
         :param path: string, path to local file with secrets
         """
         self.url = url
-        self._username = username
         self._path = path
         self._password = None
         self._token = None
@@ -37,8 +36,18 @@ class CredentialsManager:
         if exists(path):
             with open(path, "r") as f:
                 self._data = safe_load(f)
+        # if username is not specified, fetch it from the secrets file
+        if username is None:
+            try:
+                username = list(self._data.keys())[0]
+            except IndexError:
+                username = None
+        self._username = username
         if username not in self._data:
             self._data[username] = dict()
+
+    def __str__(self):
+        return "username: "+self._username + "\ntoken: "+self._token
 
     @property
     def username(self):
