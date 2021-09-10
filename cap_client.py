@@ -28,14 +28,12 @@ logging.basicConfig(format='[%(asctime)s] %(levelname) -8s %(message)s',
 parser.description = "client for interfacing with www.captest.io"
 
 # list content for assignments, datafiles, etc.
-sp_list = subparsers.add_parser("list", help="list data files")
-sp_list.add_argument("--collection", action="store",
+sp_list = subparsers.add_parser("list_assignments", help="list assignments")
+
+sp_list = subparsers.add_parser("list_files", help="list data files")
+sp_list.add_argument("--uuid", action="store",
                      default=None, required=True,
-                     choices=["assignment", "datafile"],
-                     help="type of document to list")
-sp_list.add_argument("--parent_uuid", action="store",
-                     default=None,
-                     help="uuid of parent object (required to list datafiles)")
+                     help="uuid of parent object (e.g. assignment)")
 
 # start a new assignment
 sp_start = subparsers.add_parser("start",
@@ -97,11 +95,10 @@ datafile = Datafile(config.api, credentials)
 
 result = []
 
-if config.action == "list":
-    if config.collection == "assignment":
-        result = assignment.list()
-    elif config.collection == "datafile":
-        result = datafile.list(config.parent_uuid)
+if config.action == "list_assignments":
+    result = assignment.list()
+if config.action == "list_files":
+    result = datafile.list(config.uuid)
 
 if config.action == "start":
     result = assignment.start(uuid=config.uuid,

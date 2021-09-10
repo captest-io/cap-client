@@ -10,7 +10,7 @@ Features:
 """
 
 from os import getcwd
-from os.path import join, exists, abspath
+from os.path import join, exists
 from yaml import safe_load, safe_dump
 
 
@@ -28,8 +28,6 @@ class CredentialsManager:
         :param path: string, path to local file with secrets
         :param token: set a token for the username
         """
-        print(str(path))
-        print(str(abspath(path)))
         self._path = path
         self._password = None
         self._token = None
