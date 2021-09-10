@@ -1,15 +1,13 @@
-# cap_client
+# Client for interacting with the captest.io application programming interface 
 
-Command-line client for interacting with the captest.io application programming interface (API).
-
-This repository maintains two python programs `cap_client.py` and `cap_admin_client.py`. The first is a client for managing assignments. The second program is intended for managing other content on the platform (currently restricted to admin users).
+This repository maintains two python programs: `cap_client.py` and `cap_admin_client.py`. The first is a client for managing assignments. The second program is intended for managing other content on the platform (currently restricted to admin users).
 
 
 ## Installation
 
 The client relies on python (3.7+), but does not otherwise require any special installation steps. You can just clone the repository and start using the client straight away.
 
-To test that the client works, execute the `cap_client.py` program with the `--help` option.
+For a basic check that the software works, execute `cap_client.py` with the `--help` option.
 
 ```
 python cap_client.py --help
@@ -20,7 +18,7 @@ This should display a message listing all the available command-line arguments a
 
 ## Credentials
 
-Most interactions with the captest API require authorization with a username and an access token. This information can be provided through the `--username` and `--token` arguments on the command line. However, they can also be provided in a file, avoiding repeating these data in each command. 
+Most interactions with the application programming interface (API) require authentification with a username and an access token. This information can be provided through the `--username` and `--token` arguments on the command line. However, these credentials can also be provided in a file, avoiding repeating these data in each command. 
 
 To use file-based credentials, create a file `secrets.yaml` with yaml-formatted content as follows:
 
@@ -29,7 +27,7 @@ testuser:
   token: Abcdefghijklmnopqrstuvwxyz1234
 ```
 
-In your file, replace `testuser` with your own username, and change the value `Abcdefghijklmnopqrstuvwxyz1234` to the token provided to you on the www.captest.io website (Profile page > Settings > Tokens).
+In your file, replace `testuser` with your own username, and change the value `Abcdefghijklmnopqrstuvwxyz1234` to the token provided to you on the www.captest.io website (Profile > Settings > Tokens).
 
 
 ## Managing assignments
@@ -51,7 +49,7 @@ python cap_client.py list_assignments
 
 This will display a JSON array. For a new user, the output will be `[]` (an empty JSON array). Otherwise, the output can be quite long.
 
-To start a new assignment, specify either a challenge unique universal identifier using `--uuid` or a combination of challenge name and version using `--name` and `--version`. For example, to start an assignment for the trivial challenge used in the tutorial, use the following command,
+To start a new assignment, specify a challenge unique universal identifier using `--uuid`, or a combination of challenge name and version using `--name` and `--version`. For example, to start an assignment for the trivial challenge used in the tutorial, use the following command,
 
 ```
 python cap_client.py start --name trivial --version 0.1
@@ -98,5 +96,11 @@ The status of the assignment should change from `generated` to `submitted` and l
 
 ## Admin tools
 
-The admin tools are and the admin interface are under active development. 
+The admin tools work similarly as the assignment-management tools. However,
+the API endpoints are currently restricted to admin users only.
+
+
+## Comments, questions, suggestions, bugs?
+
+Please raise an issue in the github repository. 
 
