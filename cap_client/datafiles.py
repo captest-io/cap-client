@@ -3,30 +3,29 @@ handling api requests for assignments
 """
 
 from os.path import basename
-from .api import api_get, api_post, api_upload
+from .api import Api
 
 
-def list_datafiles(api_url, credentials, parent_uuid):
-    """fetch all datafiles associated with a given parent object"""
-    url = api_url + "data/list/" + parent_uuid + "/"
-    return api_get(url, credentials.token)
+class Datafile(Api):
+    """interface for /data/ API endpoints"""
 
+    def list(self, parent_uuid):
+        """fetch all datafiles associated with a given parent object"""
+        return self.get("/data/list/" + parent_uuid)
 
-def upload(api_url, credentials, file_path, file_role,
-           parent_uuid, parent_type, source, license):
-    url = api_url + "data/upload/"
-    metadata = {
-        "file_role": file_role,
-        "file_name": basename(file_path),
-        "parent_uuid": parent_uuid,
-        "parent_type": parent_type,
-        "source": source,
-        "license": license
-    }
-    return api_upload(url, credentials.token, file_path, metadata)
+    def upload(self, file_path, file_role,
+               parent_uuid, parent_type, source, license):
+        """upload a file"""
+        metadata = {
+            "file_role": file_role,
+            "file_name": basename(file_path),
+            "parent_uuid": parent_uuid,
+            "parent_type": parent_type,
+            "source": source,
+            "license": license
+        }
+        return self.post_upload("/data/upload", file_path, metadata)
 
-
-def remove(api_url, credentials, uuid):
-    url = api_url + "data/remove/"
-    body = {"uuid": uuid}
-    return api_post(url, credentials.token, body)
+    def delete(self, uuid):
+        """send a request to remove a datafile"""
+        return self.post("/data/delete/", {"uuid": uuid})

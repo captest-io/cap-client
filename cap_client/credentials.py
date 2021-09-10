@@ -10,7 +10,7 @@ Features:
 """
 
 from os import getcwd
-from os.path import join, exists
+from os.path import join, exists, abspath
 from yaml import safe_load, safe_dump
 
 
@@ -21,14 +21,15 @@ def default_secrets_path():
 class CredentialsManager:
     """Manages username, password, tokens using a disk file"""
 
-    def __init__(self, url, username, path):
+    def __init__(self, username, path, token=None):
         """manages credentials for one username
 
-        :param url: string, url to token api
         :param username: string, username
         :param path: string, path to local file with secrets
+        :param token: set a token for the username
         """
-        self.url = url
+        print(str(path))
+        print(str(abspath(path)))
         self._path = path
         self._password = None
         self._token = None
@@ -45,6 +46,8 @@ class CredentialsManager:
         self._username = username
         if username not in self._data:
             self._data[username] = dict()
+        if token is not None:
+            self.token = token
 
     def __str__(self):
         return "username: "+self._username + "\ntoken: "+self._token

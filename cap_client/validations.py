@@ -3,6 +3,7 @@ validation of command-line arguments
 """
 
 from os.path import isdir, isfile
+from getpass import getpass
 from .errors import ValidationError
 
 
@@ -21,6 +22,17 @@ def validate_config(config):
         if config.parent_uuid is None:
             raise ValidationError("parent_uuid is required")
     return config
+
+
+def validate_credentials(credentials):
+    if credentials.username is None:
+        raise ValidationError("could not determine username")
+    # get credentials from interactive prompt if not yet available
+    if credentials.token is None:
+        credentials.token = getpass("Oauth token: ")
+    if credentials.token is None:
+        raise ValidationError("could not identify authorization token")
+    return credentials
 
 
 def validate_collection(collection, header):

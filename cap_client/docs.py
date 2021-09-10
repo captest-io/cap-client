@@ -2,11 +2,10 @@
 handling api requests for blog or documentation pages
 """
 
-import os
-from os.path import dirname, join, exists, dirname
+from os.path import join, exists, dirname
 from yaml import safe_load
-from .api import api_post, api_get
-from .datafiles import upload
+from .api import Api
+from .datafiles import Datafile
 from .errors import ClientError, ValidationError
 from .validations import validate_collection
 
@@ -63,18 +62,6 @@ def prep_output(data, file_path):
     return data
 
 
-def get_doc_uuid(api_url, credentials, collection="blog", identifier_str=""):
-    """use the api to convert a name+version into a uuid identifier"""
-    url = api_url + collection + "/update/" + identifier_str
-    result = api_get(url, credentials.token)
-    try:
-        return result["uuid"]
-    except KeyError:
-        raise ClientError(result["detail"])
-    except TypeError:
-        raise
-
-
 def inject_support(content, support_files, file_list, api_url):
     """replace simple file names by paths to support files"""
     result = content
@@ -82,7 +69,7 @@ def inject_support(content, support_files, file_list, api_url):
         if file["file_name"] not in support_files:
             continue
         result = result.replace(file["file_name"],
-                                api_url + "static/" + file["path"])
+                                api_url + "/static/" + file["path"])
     return result
 
 
@@ -111,138 +98,182 @@ def inject_context(content, context, dir=None):
     return result
 
 
-def create(api_url, credentials, file_path, collection="blog", **kwargs):
-    """send a request to create a new document"""
-    try:
-        header, body = prep_input(file_path)
-        validate_collection(collection, header)
-    except (ClientError, ValidationError) as e:
-        return {"_file": file_path, "_exception": e.message}
-    url = api_url + collection + "/create/"
-    result = api_post(url, credentials.token, body)
-    return prep_output(result, file_path)
+class Doc(Api):
+    """interface for API endpoints for documents"""
 
+    def doc_uuid(self, collection="blog", identifier=""):
+        """use the api to convert a name+version into a uuid identifier"""
+        result = self.get("/"+collection + "/update/" + identifier)
+        try:
+            return result["uuid"]
+        except KeyError:
+            raise ClientError(result["detail"])
+        except TypeError:
+            raise
 
-def update(api_url, credentials, file_path, collection="blog", action="publish"):
-    """send document content to the server"""
-    try:
-        header, body = prep_input(file_path, action=action)
-        validate_collection(collection, header)
-    except (ClientError, ValidationError) as e:
-        return {"_file": file_path, "_exception": e.message}
-    # round 1 - get uuid for the document
-    identifier = header["name"]
-    if header["version"] is not None and header["version"] != "":
-        identifier += "/" + str(header["version"])
-    try:
-        doc_uuid = get_doc_uuid(api_url, credentials, collection, identifier)
-    except ClientError as e:
-        return {"_file": file_path, "_exception": e.message}
-    # round 2 - identify available support files
-    list_url = api_url + "data/list/" + doc_uuid
-    file_list = api_get(list_url, credentials.token)
-    # round 3 - adjust the raw body with urls for support images (webp)
-    body["content"] = inject_context(body["content"], header.get("context", {}),
-                                     dir=dirname(file_path))
-    body["content"] = inject_support(body["content"], header.get("support", []),
-                                     file_list, api_url)
-    # send the content to the api
-    url = api_url + collection + "/update/" + doc_uuid
-    result = api_post(url, credentials.token, body)
-    return prep_output(result, file_path)
+    def create(self, file_path, collection="blog", **kwargs):
+        """send a request to create a new document"""
+        try:
+            header, body = prep_input(file_path)
+            validate_collection(collection, header)
+        except (ClientError, ValidationError) as e:
+            return {"_file": file_path, "_exception": e.message}
+        result = self.post("/"+collection + "/create/", body)
+        return prep_output(result, file_path)
 
+    def update(self, file_path, collection="blog", action="publish"):
+        """send document content to the server"""
+        try:
+            header, body = prep_input(file_path, action=action)
+            validate_collection(collection, header)
+        except (ClientError, ValidationError) as e:
+            return {"_file": file_path, "_exception": e.message}
+        # round 1 - get uuid for the document
+        identifier = header["name"]
+        if header["version"] is not None and header["version"] != "":
+            identifier += "/" + str(header["version"])
+        try:
+            doc_uuid = self.doc_uuid(collection, identifier)
+        except ClientError as e:
+            return {"_file": file_path, "_exception": e.message}
+        # round 2 - identify available support files
+        file_list = self.get("/data/list/"+doc_uuid)
+        # round 3 - adjust the raw body with urls for support images (webp)
+        body["content"] = inject_context(body["content"],
+                                         header.get("context", {}),
+                                         dir=dirname(file_path))
+        body["content"] = inject_support(body["content"],
+                                         header.get("support", []),
+                                         file_list, self.api_url)
+        # send the content to the api
+        result = self.post("/" + collection + "/update/" + doc_uuid, body)
+        return prep_output(result, file_path)
 
-def primary(api_url, credentials, file_path, collection="blog", **kwargs):
-    """upload a primary datafile for a document
+    def upload_primary(self, file_path, collection="blog",
+                       header=None, body=None, doc_uuid=None,
+                       **kwargs):
+        """upload a primary datafile for a document
 
-    :param api_url: string, base url for the api
-    :param credentials: object with authorization credentials
-    :param file_path: string, path to md file with header and body
-    :param collection: string, document type
-    :param kwargs: other arguments are not used, but included for consistency
-        of the function signature with update()
-    :return: dictionary with a summary of the api request
-    """
-    try:
-        header, body = prep_input(file_path)
-        validate_collection(collection, header)
-    except (ClientError, ValidationError) as e:
-        return {"_file": file_path, "_exception": e.message}
-    for k in ("datafile", "datafile_source", "datafile_license"):
-        if k not in header:
-            return {"_file": file_path, "_exception": "missing "+k}
-    datafile_path = join(dirname(file_path), header["datafile"])
-    # round 1 - fetch the latest information about the document
-    identifier_str = str(header["name"]) + "/" + str(header["version"])
-    doc_uuid = get_doc_uuid(api_url, credentials, collection, identifier_str)
-    # round 2 - upload the datafile specified in the doc header
-    result = upload(api_url, credentials, datafile_path, file_role="primary",
-                    parent_uuid=doc_uuid, parent_type=collection,
-                    source=header["datafile_source"],
-                    license=header["datafile_license"])
-    return prep_output(result, datafile_path)
+        :param file_path: string, path to md file with header and body
+        :param collection: string, document type
+        :param header: dictionary with header (if not available, it will be
+            read from file)
+        :param body: document body (if not available, it will be read from file)
+        :param doc_uuid: identifier for the document (if not available, will
+            be obtained from api)
+        :param kwargs: other arguments are not used, but included for consistency
+            of the function signature with update()
+        :return: dictionary with a summary of the api request
+        """
+        if header is None or body is None:
+            try:
+                header, body = prep_input(file_path)
+                validate_collection(collection, header)
+            except (ClientError, ValidationError) as e:
+                return {"_file": file_path, "_exception": e.message}
+        for k in ("datafile", "datafile_source", "datafile_license"):
+            if k not in header:
+                return {"_file": file_path, "_exception": "missing "+k}
+        datafile_path = join(dirname(file_path), header["datafile"])
+        # round 1 - fetch the latest information about the document
+        if doc_uuid is None:
+            identifier = str(header["name"]) + "/" + str(header["version"])
+            doc_uuid = self.doc_uuid(collection, identifier)
+        # round 2 - upload the datafile specified in the doc header
+        datafile = Datafile(self.api_url, self.credentials)
+        result = datafile.upload(datafile_path,
+                                 file_role="primary",
+                                 parent_uuid=doc_uuid,
+                                 parent_type=collection,
+                                 source=header["datafile_source"],
+                                 license=header["datafile_license"])
+        return prep_output(result, datafile_path)
 
+    def upload_support(self, file_path, collection="blog",
+                       header=None, body=None, doc_uuid=None,
+                       **kwargs):
+        """upload support files (images/pictures)
 
-def support(api_url, credentials, file_path, collection="blog", **kwargs):
-    """upload support files (images/pictures)
+        :param file_path: string, path to md file with header and body
+        :param collection: string, document type
+        :param header: dictionary with header (if not available, it will be
+            read from file)
+        :param body: document body (if not available, it will be read from file)
+        :param doc_uuid: identifier for the document (if not available, will
+            be obtained from api)
+        :param kwargs: other arguments are not used, but included for consistency
+            of the function signature with update()
+        :return: dictionary with a summary of the api request, including an array
+            with summaries of api requests for individual support files
+        """
+        if header is None or body is None:
+            try:
+                header, body = prep_input(file_path)
+                validate_collection(collection, header)
+            except (ClientError, ValidationError) as e:
+                return {"_file": file_path, "_exception": e.message}
+        if "support" not in header:
+            return {"_file": file_path, "_exception": "no support files"}
+        # round 1 - fetch the latest information about the document
+        if doc_uuid is None:
+            identifier = str(header["name"]) + "/" + str(header["version"])
+            doc_uuid = self.doc_uuid(collection, identifier)
+        # round 2 - fetch available support files
+        file_list = self.get("/data/list/"+doc_uuid)
+        existing_filenames = [_["file_name"] for _ in file_list]
+        # round 3 - upload missing support files
+        result = []
+        datafile = Datafile(self.api_url, self.credentials)
+        for filename in header["support"]:
+            support_path = join(dirname(file_path), filename)
+            if filename in existing_filenames:
+                result.append({"_file": support_path, "detail": "exists"})
+                continue
+            file_result = datafile.upload(support_path,
+                                          file_role="support",
+                                          parent_uuid=doc_uuid,
+                                          parent_type=collection,
+                                          source=self.username,
+                                          license="CC BY 4.0")
+            result.append(prep_output(file_result, support_path))
+        return {"_file": file_path, "uuid": doc_uuid, "_support": result}
 
-    :param api_url: string, base url for the api
-    :param credentials: object with authorization credentials
-    :param file_path: string, path to md file with header and body
-    :param collection: string, document type
-    :param kwargs: other arguments are not used, but included for consistency
-        of the function signature with update()
-    :return: dictionary with a summary of the api request, including an array
-        with summaries of api requests for individual support files
-    """
-    try:
-        header, body = prep_input(file_path)
-        validate_collection(collection, header)
-    except (ClientError, ValidationError) as e:
-        return {"_file": file_path, "_exception": e.message}
-    if "support" not in header:
-        return {"_file": file_path, "_exception": "no support files"}
-    # round 1 - fetch the latest information about the document
-    identifier = str(header["name"]) + "/" + str(header["version"])
-    doc_uuid = get_doc_uuid(api_url, credentials, collection, identifier)
-    # round 2 - fetch available support files
-    list_url = api_url + "data/list/" + doc_uuid
-    file_list = api_get(list_url, credentials.token)
-    existing_filenames = [_["file_name"] for _ in file_list]
-    # round 3 - upload missing support files
-    result = []
-    for filename in header["support"]:
-        support_path = join(dirname(file_path), filename)
-        if filename in existing_filenames:
-            result.append({"_file": support_path, "detail": "exists"})
-            continue
-        file_result = upload(api_url, credentials, support_path,
-                             file_role="support",
-                             parent_uuid=doc_uuid,
-                             parent_type=collection,
-                             source=credentials.username,
-                             license="CC BY 4.0")
-        result.append(prep_output(file_result, support_path))
-    return {"_file": file_path, "uuid": doc_uuid, "_support": result}
+    def upload(self, file_path, collection="blog", **kwargs):
+        """upload both primary and support data files"""
+        try:
+            header, body = prep_input(file_path)
+            validate_collection(collection, header)
+        except (ClientError, ValidationError) as e:
+            return {"_file": file_path, "_exception": e.message}
+        identifier = str(header["name"]) + "/" + str(header["version"])
+        doc_uuid = self.doc_uuid(collection, identifier)
+        primary = self.upload_primary(file_path, collection,
+                                      header=header, body=body,
+                                      doc_uuid=doc_uuid)
+        support = self.upload_support(file_path, collection,
+                                      header=header, body=body,
+                                      doc_uuid=doc_uuid)
+        return {
+            "_file": file_path,
+            "uuid": doc_uuid,
+            "_primary": primary,
+            "_support": support["_support"]
+        }
 
-
-def delete(api_url, credentials, file_path, collection="blog"):
-    """send a command to delete a document"""
-    try:
-        header, body = prep_input(file_path, action="update")
-        validate_collection(collection, header)
-    except (ClientError, ValidationError) as e:
-        return {"_file": file_path, "_exception": e.message}
-    # round 1 - get uuid for the document
-    identifier, version = header["name"], header["version"]
-    if version is not None and version != "":
-        identifier += "/" + str(version)
-    try:
-        get_doc_uuid(api_url, credentials, collection, identifier)
-    except ClientError as e:
-        return {"_file": file_path, "_exception": e.message}
-    # round 2 - send command to delete
-    url = api_url + collection + "/delete/"
-    body = {"identifier": header["name"], "version": str(version)}
-    result = api_post(url, credentials.token, body)
-    return prep_output(result, file_path)
+    def delete(self, file_path, collection="blog"):
+        """send a command to delete a document"""
+        try:
+            header, body = prep_input(file_path, action="update")
+            validate_collection(collection, header)
+        except (ClientError, ValidationError) as e:
+            return {"_file": file_path, "_exception": e.message}
+        # round 1 - get uuid for the document
+        identifier, version = header["name"], header["version"]
+        try:
+            self.doc_uuid(collection, identifier+"/"+str(version))
+        except ClientError as e:
+            return {"_file": file_path, "_exception": e.message}
+        # round 2 - send command to delete
+        body = {"identifier": header["name"], "version": str(version)}
+        result = self.post("/"+collection+"/delete/", body)
+        return prep_output(result, file_path)

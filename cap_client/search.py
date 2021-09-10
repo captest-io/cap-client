@@ -2,16 +2,16 @@
 handling api requests for search
 """
 
-from .api import api_post, api_get
+from .api import Api
 
 
-def build(api_url, credentials, **kwargs):
-    """send a request to create a new search index"""
-    url = api_url + "search/build/"
-    return api_post(url, credentials.token, dict())
+class Search(Api):
+    """interface for /search/ API endpoints"""
 
+    def build(self):
+        """send a request to create a new search index"""
+        return self.post("/search/build", dict())
 
-def summary(api_url, credentials, **kwargs):
-    """send a request to create a new search index"""
-    url = api_url + "search/summary/"
-    return api_get(url, credentials.token)
+    def summary(self):
+        """send a request to create a new search index"""
+        return self.get("/search/summary/")

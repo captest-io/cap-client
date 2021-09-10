@@ -1,0 +1,10 @@
+#!/bin/bash -l
+# This is a template for a script calling the captest client.
+#
+# To use this script in practice:
+# - copy this script to a directory that is in your $PATH
+# - modify the copy to include the absolute path of the cap_client.py file.
+# - (if you use python environments, adjust the call to 'python' as necessary)
+# - make sure the copy of the script is executable
+
+python cap_admin_client.py $@
