@@ -15,10 +15,12 @@ python cap_client.py --help
 
 This should display a message listing all the available command-line arguments along with brief descriptions.
 
+(It is also possible to execute the client through shell scripts. Some templates are available in files `captest` and `captest-admin`.)
+
 
 ## Credentials
 
-Most interactions with the application programming interface (API) require authentification with a username and an access token. This information can be provided through the `--username` and `--token` arguments on the command line. However, these credentials can also be provided in a file, avoiding repeating these data in each command. 
+Most interactions with the application programming interface (API) require a username and an access token. This information can be provided through the `--username` and `--token` arguments on the command line. However, these credentials can also be provided in a file, avoiding repeating these data in each command. 
 
 To use file-based credentials, create a file `secrets.yaml` with yaml-formatted content as follows:
 
