@@ -7,7 +7,7 @@ from yaml import safe_load
 from .api import Api
 from .datafiles import Datafile
 from .errors import ClientError, ValidationError
-from .validations import validate_collection
+from .validations import validate_collection, validate_notes
 
 
 def read_header_content(path):
@@ -57,6 +57,20 @@ def prep_input(file_path, action=""):
     return header, body
 
 
+def prep_notes(notes):
+    """ensure that a notes object is a markdown-like string"""
+    if type(notes) is str:
+        return notes
+    if type(notes) is list:
+        result = []
+        for line in notes:
+            if not line.startswith("- "):
+                line = "- "+line
+            result.append(line)
+        result = "\n".join(result)
+    return result
+
+
 def prep_output(data, file_path):
     data["_file"] = file_path
     return data
@@ -91,11 +105,18 @@ def context_text(v, dir):
 
 def inject_context(content, context, dir=None):
     """replace placeholders by values from a context dictionary"""
+    if type(content) is list:
+        return [inject_context(_, context, dir=dir) for _ in content]
     result = content
     for k, v in context.items():
-        v_text = context_text(v, dir=dir)
-        result = result.replace("{" + k + "}", v_text)
-    return result
+        k_placeholder = "{" + k + "}"
+        if k_placeholder in content:
+            v_text = context_text(v, dir=dir)
+            result = result.replace(k_placeholder, v_text)
+        if k == content.strip():
+            v_text = context_text(v, dir=dir)
+            result = result.replace(k, v_text)
+    return result.strip()
 
 
 class Doc(Api):
@@ -126,6 +147,7 @@ class Doc(Api):
         try:
             header, body = prep_input(file_path, action=action)
             validate_collection(collection, header)
+            header = validate_notes(header)
         except (ClientError, ValidationError) as e:
             return {"_file": file_path, "_exception": e.message}
         # round 1 - get uuid for the document
@@ -138,13 +160,16 @@ class Doc(Api):
             return {"_file": file_path, "_exception": e.message}
         # round 2 - identify available support files
         file_list = self.get("/data/list/"+doc_uuid)
-        # round 3 - adjust the raw body with urls for support images (webp)
-        body["content"] = inject_context(body["content"],
-                                         header.get("context", {}),
-                                         dir=dirname(file_path))
+        _context = header.get("context", {})
+        _dir = dirname(file_path)
+        # round 3 - adjust the paylod
+        # (construct urls for support images, use content from templates)
+        body["content"] = inject_context(body["content"], _context, dir=_dir)
         body["content"] = inject_support(body["content"],
                                          header.get("support", []),
                                          file_list, self.api_url)
+        body["notes"] = inject_context(header["notes"], _context, dir=_dir)
+        body["notes"] = prep_notes(body["notes"])
         # send the content to the api
         result = self.post("/" + collection + "/update/" + doc_uuid, body)
         return prep_output(result, file_path)
@@ -213,7 +238,7 @@ class Doc(Api):
             except (ClientError, ValidationError) as e:
                 return {"_file": file_path, "_exception": e.message}
         if "support" not in header:
-            return {"_file": file_path, "_exception": "no support files"}
+            return {"_file": file_path, "_support": []}
         # round 1 - fetch the latest information about the document
         if doc_uuid is None:
             identifier = str(header["name"]) + "/" + str(header["version"])

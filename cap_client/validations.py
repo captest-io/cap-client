@@ -42,3 +42,15 @@ def validate_collection(collection, header):
     if collection != header["collection"]:
         two = "'" + collection + "' and '" + header["collection"] + "'"
         raise ValidationError("inconsistent collection: "+two)
+
+
+def validate_notes(header):
+    """check that certain documents have a notes field in the header"""
+    notes = header.get("notes", "")
+    header["notes"] = notes
+    if header["collection"] not in ("challenge", "resource", "image"):
+        return header
+    if len(str(notes)) < 4:
+        raise ValidationError("notes are short (use more than 4 characters)")
+    return header
+
