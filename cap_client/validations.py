@@ -3,7 +3,7 @@ validation of command-line arguments
 """
 
 from os.path import isdir, isfile
-from getpass import getpass
+import getpass
 from .errors import ValidationError
 
 
@@ -18,30 +18,29 @@ def validate_config(config):
         config.api += "/"
     if not config.api.startswith("http"):
         config.api = "https://"+config.api
-    if config.action == "list" and config.collection == "datafile":
-        if config.parent_uuid is None:
-            raise ValidationError("parent_uuid is required")
     return config
 
 
 def validate_credentials(credentials):
     if credentials.username is None:
         raise ValidationError("could not determine username")
-    # get credentials from interactive prompt if not yet available
+    # attempt to get token through an interactive prompt
     if credentials.token is None:
-        credentials.token = getpass("Oauth token: ")
-    if credentials.token is None:
-        raise ValidationError("could not identify authorization token")
+        credentials.token = getpass.getpass("Oauth token: ")
+    if credentials.token is None or credentials.token == "":
+        raise ValidationError("could not determine authorization token")
     return credentials
 
 
-def validate_collection(collection, header):
+def validate_collection(header, collection):
     """checks that a collection (from cli) is consistent with a file header"""
     if "collection" not in header:
         raise ValidationError("header does not specify collection")
+    header["collection"] = header["collection"].lower()
     if collection != header["collection"]:
         two = "'" + collection + "' and '" + header["collection"] + "'"
         raise ValidationError("inconsistent collection: "+two)
+    return header
 
 
 def validate_notes(header):

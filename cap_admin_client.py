@@ -100,14 +100,11 @@ if config.action in doc_actions:
     files = [_ for _ in files if _.endswith(".md")]
     files = [_ for _ in files if not basename(_).startswith("_")]
     for f in files:
-        result.append(action(f,
-                             collection=config.collection,
-                             action=config.action))
+        result.append(action(f, config.collection, action=config.action))
 
 # deleting challenges, resources, etc.
 if config.action == "delete":
-    result.append(doc.delete(config.file,
-                             collection=config.collection))
+    result.append(doc.delete(config.file, config.collection))
 
 # managing search
 if config.action == "build_search":
