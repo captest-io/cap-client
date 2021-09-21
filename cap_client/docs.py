@@ -8,7 +8,7 @@ from yaml import safe_load
 from .api import Api
 from .datafiles import Datafile
 from .errors import ClientError, ValidationError
-from .validations import validate_collection, validate_notes
+from .validations import validate_collection, validate_notes, validate_naming
 
 
 def read_header_content(path):
@@ -64,6 +64,7 @@ def prep_header_body(f):
                 header, body = prep_header_body_from_file(file_path, collection)
             except (ClientError, ValidationError) as e:
                 return {"_file": file_path, "_exception": e.message}
+        header = validate_naming(header, file_path)
         return f(cls, file_path, collection, header=header, body=body, **kwargs)
 
     return wrapper_f

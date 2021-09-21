@@ -12,6 +12,7 @@ from cap_client.validations import \
     validate_collection, \
     validate_config, \
     validate_credentials, \
+    validate_naming, \
     validate_notes
 
 
@@ -142,3 +143,18 @@ class ValidateNotesTests(unittest.TestCase):
         result = validate_notes(header)
         self.assertGreater(len(result["notes"]), 0)
 
+
+class ValidateNamingTests(unittest.TestCase):
+    """consistency checks between info in doc header and file names"""
+
+    def test_inconsistent_doc_name(self):
+        header = {"name": "docname", "version": 1.2}
+        with self.assertLogs(level="WARN") as cm:
+            validate_naming(header, "testdata/abc_v1.2.md")
+        self.assertTrue("document name" in str(cm.output))
+
+    def test_inconsistent_version_name(self):
+        header = {"name": "docname", "version": 0.2}
+        with self.assertLogs(level="WARN") as cm:
+            validate_naming(header, "testdata/docname_v1.2.md")
+        self.assertTrue("document version" in str(cm.output))

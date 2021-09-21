@@ -53,6 +53,9 @@ for sp in [sp_create, sp_publish, sp_upload,
                     help="path to document file")
     sp.add_argument("--dir", action="store", default=None,
                     help="path to directory with document files")
+    sp.add_argument("--checks", action="store", default="strict",
+                    choices=["strict", "none"],
+                    help="run non-obligatory consistency checks")
 
 # build search
 sp_search = subparsers.add_parser("build_search")
@@ -97,7 +100,7 @@ if config.action in doc_actions:
     files = [config.file]
     if config.dir is not None:
         files = [join(config.dir, _) for _ in listdir(config.dir)]
-    files = [_ for _ in files if _.endswith(".md")]
+    files = [_ for _ in files if _ is not None and _.endswith(".md")]
     files = [_ for _ in files if not basename(_).startswith("_")]
     for f in files:
         result.append(action(f, config.collection, action=config.action))

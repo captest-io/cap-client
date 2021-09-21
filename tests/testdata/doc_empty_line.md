@@ -1,5 +1,5 @@
 ---
-name: bad document
+name: bad_document
 
 title: empty line in header
 ---

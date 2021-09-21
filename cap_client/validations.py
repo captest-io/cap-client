@@ -2,8 +2,9 @@
 validation of command-line arguments
 """
 
-from os.path import isdir, isfile
 import getpass
+import logging
+from os.path import isdir, isfile, basename
 from .errors import ValidationError
 
 
@@ -53,3 +54,19 @@ def validate_notes(header):
         raise ValidationError("notes are short (use more than 4 characters)")
     return header
 
+
+def validate_naming(header, file_path):
+    """check naming conventions (information in header matches with filename)
+
+    These checks can log warnings, but do not raise errors.
+    """
+    file_basename = basename(file_path)
+    if header["name"] not in file_basename:
+        logging.warning("file name and document name do not overlap:")
+        logging.warning("file name: " + file_path)
+        logging.warning("document name: " + header["name"])
+    if str(header["version"]) not in file_basename:
+        logging.warning("file name and document version do not overlap:")
+        logging.warning("file name: " + file_path)
+        logging.warning("document version: " + str(header["version"]))
+    return header

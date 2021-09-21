@@ -1,5 +1,5 @@
 ---
-name: testdoc
+name: doc_good
 title: Test document
 ---
 
