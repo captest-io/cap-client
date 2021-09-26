@@ -11,6 +11,7 @@ from cap_client.errors import ValidationError
 from cap_client.credentials import CredentialsManager
 from cap_client.datafiles import Datafile
 from cap_client.assignments import Assignment
+from cap_client.examples import ExampleDataset
 
 
 # this is a command line utility
@@ -35,15 +36,20 @@ sp_list.add_argument("--uuid", action="store",
                      default=None, required=True,
                      help="uuid of parent object (e.g. assignment)")
 
+# download the example dataset associated with a challenge
+sp_example = subparsers.add_parser("download_example",
+                                   help="download example dataset")
 # start a new assignment
 sp_start = subparsers.add_parser("start",
                                  help="start a new assignment")
-sp_start.add_argument("--name", action="store", default=None,
-                      help="challenge name")
-sp_start.add_argument("--version", action="store", default=None,
-                      help="challenge version")
-sp_start.add_argument("--uuid", action="store", default=None,
-                      help="challenge identifier (overrides name and version)")
+for sp in [sp_example, sp_start]:
+    sp.add_argument("--name", action="store", default=None,
+                    help="challenge name")
+    sp.add_argument("--version", action="store", default=None,
+                    help="challenge version")
+    sp.add_argument("--uuid", action="store", default=None,
+                    help="challenge identifier (overrides name and version)")
+
 
 # view/download/upload associated with an assignment
 sp_download = subparsers.add_parser("download",
@@ -92,6 +98,7 @@ if config.verbose:
 
 assignment = Assignment(config.api, credentials)
 datafile = Datafile(config.api, credentials)
+example = ExampleDataset(config.api, credentials)
 
 result = []
 
@@ -99,6 +106,10 @@ if config.action == "list_assignments":
     result = assignment.list()
 if config.action == "list_files":
     result = datafile.list(config.uuid)
+
+if config.action == "download_example":
+    result = example.download(uuid=config.uuid,
+                              name=config.name, version=config.version)
 
 if config.action == "start":
     result = assignment.start(uuid=config.uuid,
