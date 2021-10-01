@@ -49,7 +49,8 @@ for sp in [sp_example, sp_start]:
                     help="challenge version")
     sp.add_argument("--uuid", action="store", default=None,
                     help="challenge identifier (overrides name and version)")
-
+sp_example.add_argument("--dir", action="store", default=".",
+                        help="directory to store downloaded files")
 
 # view/download/upload associated with an assignment
 sp_download = subparsers.add_parser("download",
@@ -67,14 +68,17 @@ for sp in [sp_download, sp_view, sp_upload_response, sp_remove_response]:
 sp_upload_response.add_argument("--file", action="store",
                                 default=None, required=True,
                                 help="path to response data file")
+sp_download.add_argument("--data_dir", action="store", default=".",
+                         help="directory to store downloaded files")
+
 
 # submit an assignment
 sp_submit = subparsers.add_parser("submit",
                                   help="submit an assignment for evaluation")
 sp_submit.add_argument("--uuid", action="store", default=None, required=True,
                        help="assignment identifier")
-sp_submit.add_argument("--tags", action="store", default=None,
-                       help="tags (comma separated)")
+sp_submit.add_argument("--tags", action="store", default=None, required=True,
+                       help="comma separated tags; use 'none' or '-' to skip")
 
 
 # ############################################################################
@@ -108,14 +112,14 @@ if config.action == "list_files":
     result = datafile.list(config.uuid)
 
 if config.action == "download_example":
-    result = example.download(uuid=config.uuid,
+    result = example.download(uuid=config.uuid, data_dir=config.data_dir,
                               name=config.name, version=config.version)
 
 if config.action == "start":
     result = assignment.start(uuid=config.uuid,
                               name=config.name, version=config.version)
 if config.action == "download":
-    result = assignment.download(uuid=config.uuid)
+    result = assignment.download(uuid=config.uuid, data_dir=config.data_dir)
 if config.action == "upload_response":
     result = assignment.upload(uuid=config.uuid, file_path=config.file)
 if config.action == "remove_response":

@@ -2,6 +2,7 @@
 handling api requests for assignments
 """
 
+from os.path import join
 from urllib.request import urlretrieve
 from .api import Api
 from .datafiles import Datafile
@@ -17,6 +18,7 @@ class Assignment(Api):
 
     def submit(self, uuid, tags=None):
         tags = "" if tags is None else tags
+        tags = "" if tags in ("-", "none") else tags
         return self.post("/assignment/submit/" + uuid, {"tags": tags})
 
     def start(self, uuid=None, name=None, version=None):
@@ -26,13 +28,13 @@ class Assignment(Api):
             body = {"uuid": uuid}
         return self.post("/assignment/create/", body)
 
-    def download(self, uuid):
+    def download(self, uuid, data_dir="."):
         """download data files from the server for one assignment"""
         datafiles = self.get("/data/list/" + uuid)
         for f in datafiles:
             f_url = self.api_url + "/static/" + f["path"]
             f_basename = f_url.split("/")[-1]
-            urlretrieve(f_url, f_basename)
+            urlretrieve(f_url, join(data_dir, f_basename))
         return datafiles
 
     def upload(self, uuid, file_path):
