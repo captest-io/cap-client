@@ -49,7 +49,7 @@ for sp in [sp_example, sp_start]:
                     help="challenge version")
     sp.add_argument("--uuid", action="store", default=None,
                     help="challenge identifier (overrides name and version)")
-sp_example.add_argument("--dir", action="store", default=".",
+sp_example.add_argument("--data_dir", action="store", default=".",
                         help="directory to store downloaded files")
 
 # view/download/upload associated with an assignment
