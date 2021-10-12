@@ -5,7 +5,13 @@ This repository maintains two python programs: `cap_client.py` and `cap_admin_cl
 
 ## Installation
 
-The client relies on python (3.7+), but does not otherwise require any special installation steps. You can just clone the repository and start using the client straight away.
+The client relies on python (3.7+) and a small number of packages. To get started, clone the repository, and then install the required packages.
+
+```
+python -m pip install -r requirements.txt
+```
+
+(You may wish to use a virtual environment and install these packages in an isolated environment.)
 
 For a basic check that the software works, execute `cap_client.py` with the `--help` option.
 
@@ -15,7 +21,7 @@ python cap_client.py --help
 
 This should display a message listing all the available command-line arguments along with brief descriptions.
 
-(It is also possible to execute the client through shell scripts. Some templates are available in files `captest` and `captest-admin`.)
+(It can be convenient to execute the client through shell scripts. Some templates are available in files `captest` and `captest-admin`.)
 
 
 ## Credentials

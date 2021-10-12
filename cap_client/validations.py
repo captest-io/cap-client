@@ -61,7 +61,7 @@ def validate_naming(header, file_path):
     These checks can log warnings, but do not raise errors.
     """
     file_basename = basename(file_path)
-    if header["name"] not in file_basename:
+    if header["name"].replace(".", "-") not in file_basename.replace(".", "-"):
         logging.warning("file name and document name do not overlap:")
         logging.warning("file name: " + file_path)
         logging.warning("document name: " + header["name"])
