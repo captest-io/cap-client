@@ -5,6 +5,7 @@ handling api requests to download example datasets
 from os.path import join
 from urllib.request import urlretrieve
 from .api import Api
+from .errors import ClientError
 
 
 class ExampleDataset(Api):
@@ -14,6 +15,8 @@ class ExampleDataset(Api):
         """download all example files associated with a challenge"""
         identifier = uuid if uuid is not None else name + "/" + version
         doc_data = self.get("/challenge/view/" + identifier)
+        if "name" not in doc_data:
+            raise ClientError(str(doc_data))
         doc_name, doc_version = doc_data["name"], doc_data["version"]
         assignment_uuid = doc_data["demo_assignment_uuid"]
         datafiles = self.get("/data/list/" + assignment_uuid)
