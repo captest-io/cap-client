@@ -11,7 +11,14 @@ The client relies on python (3.7+) and a small number of packages. To get starte
 python -m pip install -r requirements.txt
 ```
 
-(You may wish to use a virtual environment and install these packages in an isolated environment.)
+Alternatively, you may wish to use a virtual environment. In that case, create an environment and install the requirements within that environment.
+
+```
+python -m venv venv-client
+source venv-client/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
 
 For a basic check that the software works, execute `cap_client.py` with the `--help` option.
 
