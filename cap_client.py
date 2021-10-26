@@ -4,6 +4,7 @@ Usage: python cap_client.py --help
 """
 
 import logging
+import time
 from json import dumps
 from cap_client.parser import parser, subparsers
 from cap_client.validations import validate_config, validate_credentials
@@ -49,8 +50,13 @@ for sp in [sp_example, sp_start]:
                     help="challenge version")
     sp.add_argument("--uuid", action="store", default=None,
                     help="challenge identifier (overrides name and version)")
-sp_example.add_argument("--data_dir", action="store", default=".",
-                        help="directory to store downloaded files")
+    sp.add_argument("--data_dir", action="store", default=".",
+                    help="directory to store downloaded files")
+sp_start.add_argument("--download", action="store_true",
+                      help="attempt automatic download of dataset files")
+sp_start.add_argument("--sleep", action="store", default=5,
+                      help="time interval before download attempt")
+
 
 # view/download/upload associated with an assignment
 sp_download = subparsers.add_parser("download",
@@ -77,6 +83,9 @@ sp_submit = subparsers.add_parser("submit",
                                   help="submit an assignment for evaluation")
 sp_submit.add_argument("--uuid", action="store", default=None, required=True,
                        help="assignment identifier")
+sp_submit.add_argument("--file", action="store",
+                       default=None, required=False,
+                       help="path to response data file")
 sp_submit.add_argument("--tags", action="store", default=None, required=True,
                        help="comma separated tags; use 'none' or '-' to skip")
 
@@ -118,6 +127,12 @@ if config.action == "download_example":
 if config.action == "start":
     result = assignment.start(uuid=config.uuid,
                               name=config.name, version=config.version)
+    if config.download:
+        uuid = result["uuid"]
+        result = {"start": result}
+        time.sleep(config.sleep)
+        result["download"] = assignment.download(uuid=uuid,
+                                                 data_dir=config.data_dir)
 if config.action == "download":
     result = assignment.download(uuid=config.uuid, data_dir=config.data_dir)
 if config.action == "upload_response":
@@ -125,7 +140,14 @@ if config.action == "upload_response":
 if config.action == "remove_response":
     result = assignment.remove(uuid=config.uuid)
 if config.action == "submit":
-    result = assignment.submit(uuid=config.uuid, tags=config.tags)
+    if config.file is not None:
+        result = dict()
+        result["upload_response"] = assignment.upload(uuid=config.uuid,
+                                                      file_path=config.file)
+        result["submit"] = assignment.submit(uuid=config.uuid,
+                                             tags=config.tags)
+    else:
+        result = assignment.submit(uuid=config.uuid, tags=config.tags)
 if config.action == "view":
     result = assignment.view(uuid=config.uuid)
 
